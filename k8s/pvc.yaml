@@ -1,0 +1,38 @@
+---
+# PersistentVolumeClaim for PostgreSQL data
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-data-pvc
+  namespace: imagomortis
+  labels:
+    app.kubernetes.io/name: postgres
+    app.kubernetes.io/component: database
+    app.kubernetes.io/part-of: imagomortis
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  # Uncomment and specify storageClassName if needed
+  # storageClassName: standard
+
+---
+# PersistentVolumeClaim for shared uploads directory (between uploader and pusher)
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: uploads-pvc
+  namespace: imagomortis
+  labels:
+    app.kubernetes.io/name: uploads
+    app.kubernetes.io/part-of: imagomortis
+spec:
+  accessModes:
+    - ReadWriteMany  # Both uploader and pusher need access
+  resources:
+    requests:
+      storage: 10Gi
+  # Uncomment and specify storageClassName if needed (must support RWX)
+  # storageClassName: nfs

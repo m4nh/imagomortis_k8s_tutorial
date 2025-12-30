@@ -1,0 +1,116 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: imagomortis-ingress
+  namespace: imagomortis
+  labels:
+    app.kubernetes.io/name: imagomortis
+    app.kubernetes.io/part-of: imagomortis
+  annotations:
+    # Uncomment for nginx ingress controller
+    # nginx.ingress.kubernetes.io/rewrite-target: /
+    # nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    # nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    
+    # Uncomment for traefik ingress controller
+    # traefik.ingress.kubernetes.io/router.entrypoints: web
+spec:
+  # Uncomment and set the ingressClassName for your cluster
+  # ingressClassName: nginx
+  rules:
+    # Main web UI accessible at root
+    - host: imagomortis.local
+      http:
+        paths:
+          # Web UI - main frontend
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: webui
+                port:
+                  number: 3000
+          # API endpoints
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: api
+                port:
+                  number: 8000
+          # Upload endpoint
+          - path: /upload
+            pathType: Prefix
+            backend:
+              service:
+                name: uploader
+                port:
+                  number: 8000
+
+---
+# Alternative: NodePort services for local development without Ingress
+apiVersion: v1
+kind: Service
+metadata:
+  name: webui-nodeport
+  namespace: imagomortis
+  labels:
+    app.kubernetes.io/name: webui
+    app.kubernetes.io/component: frontend
+    app.kubernetes.io/part-of: imagomortis
+spec:
+  type: NodePort
+  ports:
+    - port: 3000
+      targetPort: 3000
+      nodePort: 30080
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: webui
+    app.kubernetes.io/component: frontend
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-nodeport
+  namespace: imagomortis
+  labels:
+    app.kubernetes.io/name: api
+    app.kubernetes.io/component: backend-api
+    app.kubernetes.io/part-of: imagomortis
+spec:
+  type: NodePort
+  ports:
+    - port: 8000
+      targetPort: 8000
+      nodePort: 30081
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: api
+    app.kubernetes.io/component: backend-api
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: uploader-nodeport
+  namespace: imagomortis
+  labels:
+    app.kubernetes.io/name: uploader
+    app.kubernetes.io/component: upload-service
+    app.kubernetes.io/part-of: imagomortis
+spec:
+  type: NodePort
+  ports:
+    - port: 8000
+      targetPort: 8000
+      nodePort: 30082
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: uploader
+    app.kubernetes.io/component: upload-service

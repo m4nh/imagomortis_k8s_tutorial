@@ -1,0 +1,40 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: imagomortis
+
+namespace: imagomortis
+
+# Common labels applied to all resources
+commonLabels:
+  app.kubernetes.io/managed-by: kustomize
+  app.kubernetes.io/part-of: imagomortis
+
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - secrets.yaml
+  - pvc.yaml
+  - postgres.yaml
+  - uploader.yaml
+  - pusher.yaml
+  - api.yaml
+  - webui.yaml
+  - ingress.yaml
+  - logging.yaml
+
+# Image customization - update these for your registry
+images:
+  - name: imagomortis/uploader
+    newName: imagomortis/uploader
+    newTag: latest
+  - name: imagomortis/pusher
+    newName: imagomortis/pusher
+    newTag: latest
+  - name: imagomortis/api
+    newName: imagomortis/api
+    newTag: latest
+  - name: imagomortis/webui
+    newName: imagomortis/webui
+    newTag: latest

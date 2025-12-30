@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: imagomortis-config
+  namespace: imagomortis
+  labels:
+    app.kubernetes.io/name: imagomortis
+    app.kubernetes.io/part-of: imagomortis
+data:
+  # Database configuration
+  POSTGRES_DB: "imagomortis"
+  POSTGRES_HOST: "postgres"
+  POSTGRES_PORT: "5432"
+  PGDATA: "/var/lib/postgresql/data/pgdata"
+  
+  # Uploader configuration
+  UPLOADER_RESIZE_HEIGHT: "256"
+  UPLOADER_HOST: "0.0.0.0"
+  UPLOADER_PORT: "8000"
+  
+  # Pusher configuration
+  PUSHER_POLL_INTERVAL: "5"
+  
+  # API configuration
+  API_HOST: "0.0.0.0"
+  API_PORT: "8000"
+  
+  # WebUI configuration
+  # These URLs are accessed from the BROWSER, so they must be externally accessible!
+  # For local development with NodePort:
+  PUBLIC_UPLOAD_SERVICE_URL: "http://localhost:30082"
+  PUBLIC_API_SERVICE_URL: "http://localhost:30081"
+  # For production with Ingress (uncomment and adjust):
+  # PUBLIC_UPLOAD_SERVICE_URL: "http://imagomortis.local/upload"
+  # PUBLIC_API_SERVICE_URL: "http://imagomortis.local/api"
+  
+  ORIGIN: "http://localhost:30080"
+  HOST: "0.0.0.0"
+  PORT: "3000"

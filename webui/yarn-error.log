@@ -1,0 +1,66 @@
+Arguments: 
+  /Users/daniele/.nvm/versions/node/v24.9.0/bin/node /opt/homebrew/bin/yarn install
+
+PATH: 
+  /Users/daniele/.nvm/versions/node/v24.9.0/bin:/Users/daniele/.deno/bin:/Users/daniele/.local/bin:/Users/daniele/work/tools/google-cloud-sdk/bin:/opt/homebrew/opt/python@3.10/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/System/Cryptexes/App/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin:/Users/daniele/.cargo/bin:/Applications/iTerm.app/Contents/Resources/utilities
+
+Yarn version: 
+  1.22.19
+
+Node version: 
+  24.9.0
+
+Platform: 
+  darwin arm64
+
+Trace: 
+  Error: http://force.eyecan.ai:4873/@eslint%2fcompat: ETIMEDOUT
+      at Timeout._onTimeout (/opt/homebrew/lib/node_modules/yarn/lib/cli.js:141550:19)
+      at listOnTimeout (node:internal/timers:608:17)
+      at process.processTimers (node:internal/timers:543:7)
+
+npm manifest: 
+  {
+  	"name": "webui",
+  	"private": true,
+  	"version": "0.0.1",
+  	"type": "module",
+  	"scripts": {
+  		"dev": "vite dev",
+  		"build": "vite build",
+  		"preview": "vite preview",
+  		"prepare": "svelte-kit sync || echo ''",
+  		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+  		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+  		"format": "prettier --write .",
+  		"lint": "prettier --check . && eslint ."
+  	},
+  	"devDependencies": {
+  		"@eslint/compat": "^1.4.0",
+  		"@eslint/js": "^9.39.1",
+  		"@sveltejs/adapter-auto": "^7.0.0",
+  		"@sveltejs/kit": "^2.49.1",
+  		"@sveltejs/vite-plugin-svelte": "^6.2.1",
+  		"@tailwindcss/vite": "^4.1.17",
+  		"@types/node": "^22",
+  		"eslint": "^9.39.1",
+  		"eslint-config-prettier": "^10.1.8",
+  		"eslint-plugin-svelte": "^3.13.1",
+  		"globals": "^16.5.0",
+  		"prettier": "^3.7.4",
+  		"prettier-plugin-svelte": "^3.4.0",
+  		"prettier-plugin-tailwindcss": "^0.7.2",
+  		"svelte": "^5.45.6",
+  		"svelte-check": "^4.3.4",
+  		"tailwindcss": "^4.1.17",
+  		"typescript": "^5.9.3",
+  		"typescript-eslint": "^8.48.1",
+  		"vite": "^7.2.6"
+  	}
+  }
+
+yarn manifest: 
+  No manifest
+
+Lockfile: 
+  No lockfile
