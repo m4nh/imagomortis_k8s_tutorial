@@ -53,6 +53,7 @@ def init_db():
         # Add new columns if they don't exist
         cur.execute("ALTER TABLE images ADD COLUMN IF NOT EXISTS image_resolution TEXT")
         cur.execute("ALTER TABLE images ADD COLUMN IF NOT EXISTS size BIGINT")
+        cur.execute("ALTER TABLE images ADD COLUMN IF NOT EXISTS job JSONB")
         conn.commit()
         cur.close()
         conn.close()

@@ -5,11 +5,20 @@
 /**
  * Image metadata returned by the API
  */
+
+export interface Job {
+	job_id?: string;
+	completed?: boolean;
+	completed_at?: string | null;
+	progress?: Record<string, number> | null;
+}
+
 export interface Image {
 	id: string;
 	created_at: string | null;
 	resolution: string | null;
 	size: string | null;
+	job?: Job | null;
 }
 
 /**

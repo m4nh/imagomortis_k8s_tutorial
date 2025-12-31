@@ -23,6 +23,7 @@ resources:
   - webui.yaml
   - ingress.yaml
   - logging.yaml
+  - scheduler.yaml
 
 # Image customization - update these for your registry
 images:
@@ -37,4 +38,10 @@ images:
     newTag: latest
   - name: imagomortis/webui
     newName: imagomortis/webui
+    newTag: latest
+  - name: imagomortis/scheduler
+    newName: imagomortis/scheduler
+    newTag: latest
+  - name: imagomortis/imagetask
+    newName: imagomortis/imagetask
     newTag: latest

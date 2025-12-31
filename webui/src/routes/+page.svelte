@@ -3,6 +3,7 @@
 	import type { Image } from '$lib/services/models';
 	import { UploadService } from '$lib/services/UploadService';
 	import { ImageService } from '$lib/services/ImageService';
+	import ImageRow from '$lib/components/ImageRow.svelte';
 
 	let images = $state<Image[]>([]);
 	let isLoading = $state(false);
@@ -59,19 +60,7 @@
 
 	
 
-	function formatDate(dateStr: string | null): string {
-		if (!dateStr) return '-';
-		return new Date(dateStr).toLocaleString();
-	}
-
-	function formatSize(size: string | null): string {
-		if (!size) return '-';
-		const bytes = parseInt(size, 10);
-		if (isNaN(bytes)) return size;
-		if (bytes < 1024) return `${bytes} B`;
-		if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-		return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-	}
+	
 </script>
 
 <div class="container mx-auto p-6 max-w-4xl">
@@ -141,19 +130,7 @@
 						</tr>
 					{:else}
 						{#each images as image (image.id)}
-							<tr class="hover:bg-gray-50">
-								<td class="border border-gray-300 px-4 py-2">
-									<img
-										src={imageService.getImageUrl(image.id)}
-										alt="Preview"
-										class="h-12 w-auto object-cover rounded"
-									/>
-								</td>
-								<td class="border border-gray-300 px-4 py-2 font-mono text-sm">{image.id}</td>
-								<td class="border border-gray-300 px-4 py-2">{formatDate(image.created_at)}</td>
-								<td class="border border-gray-300 px-4 py-2">{image.resolution || '-'}</td>
-								<td class="border border-gray-300 px-4 py-2">{formatSize(image.size)}</td>
-							</tr>
+							<ImageRow {image} />
 						{/each}
 					{/if}
 				</tbody>

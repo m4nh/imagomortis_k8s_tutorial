@@ -2,11 +2,12 @@ import os
 import psycopg2
 from fastapi import FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any
 from datetime import datetime
 from pydantic import BaseModel
 import sys
 from loguru import logger
+import json
 
 # Configure Loguru
 logger.remove()
@@ -48,6 +49,7 @@ class Image(BaseModel):
     created_at: Optional[str] = None
     resolution: Optional[str] = None
     size: Optional[str] = None
+    job: Optional[Dict[str, Any]] = None
 
 
 def get_db_connection():
@@ -65,7 +67,7 @@ async def get_images():
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute(
-            "SELECT id, created_at, image_resolution, size FROM images ORDER BY created_at DESC"
+            "SELECT id, created_at, image_resolution, size, job FROM images ORDER BY created_at DESC"
         )
         rows = cur.fetchall()
         cur.close()
@@ -77,6 +79,7 @@ async def get_images():
                 "created_at": row[1].isoformat() if row[1] else None,
                 "resolution": row[2],
                 "size": str(row[3]),
+                "job": row[4],
             }
             for row in rows
         ]

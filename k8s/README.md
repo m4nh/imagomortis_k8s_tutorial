@@ -18,6 +18,8 @@ This directory contains the complete Kubernetes manifests to deploy the ImagoMor
 | `webui.yaml` | Web UI Deployment and Service |
 | `ingress.yaml` | Ingress + NodePort services for external access |
 | `kustomization.yaml` | Kustomize configuration for easy deployment |
+| `logging.yaml` | Cluster logging resources (daemonsets/configs for log collection) |
+| `scheduler.yaml` | Scheduler/CronJob resources for periodic tasks |
 
 ## Prerequisites
 
@@ -56,37 +58,6 @@ kubectl apply -k .
 
 # Or preview what will be deployed
 kubectl kustomize .
-```
-
-### Option 2: Manual Deployment
-
-Apply the manifests in order:
-
-```bash
-# 1. Create namespace first
-kubectl apply -f namespace.yaml
-
-# 2. Apply configuration and secrets
-kubectl apply -f configmap.yaml
-kubectl apply -f secrets.yaml
-
-# 3. Create persistent storage
-kubectl apply -f pvc.yaml
-
-# 4. Deploy PostgreSQL (wait for it to be ready)
-kubectl apply -f postgres.yaml
-kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=postgres -n imagomortis --timeout=120s
-
-# 5. Deploy backend services
-kubectl apply -f uploader.yaml
-kubectl apply -f pusher.yaml
-kubectl apply -f api.yaml
-
-# 6. Deploy frontend
-kubectl apply -f webui.yaml
-
-# 7. Create ingress and nodeport services
-kubectl apply -f ingress.yaml
 ```
 
 ## Accessing the Application
