@@ -41,6 +41,14 @@
                 <div class="text-xs text-green-600">Completed {formatDate(image.job.completed_at!)}</div>
             {/if}
 
+            {#if image.job.failed}
+                <div class="text-xs text-red-600">Failed{image.job.failed_at ? ` ${formatDate(image.job.failed_at)}` : ''}</div>
+            {/if}
+
+            {#if image.job.error}
+                <div class="text-xs text-red-700 mt-1 truncate" title={image.job.error}>{image.job.error}</div>
+            {/if}
+
             {#if image.job.progress && Object.keys(image.job.progress).length > 0}
                 <div class="mt-2 space-y-2">
                     {#each Object.entries(image.job.progress) as [label, val] (label)}

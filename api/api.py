@@ -114,6 +114,54 @@ async def get_image(image_id: str):
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
+@app.delete("/image/{image_id}", status_code=204)
+async def delete_image(image_id: str):
+    """Delete an image row from the database by ID."""
+    logger.info(f"Endpoint called: DELETE /image/{image_id}")
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        # Use RETURNING to check if a row was actually deleted
+        cur.execute("DELETE FROM images WHERE id = %s RETURNING id", (image_id,))
+        deleted = cur.fetchone()
+        if deleted is None:
+            conn.rollback()
+            cur.close()
+            conn.close()
+            logger.warning(f"Image not found for deletion: {image_id}")
+            raise HTTPException(status_code=404, detail="Image not found")
+        conn.commit()
+        cur.close()
+        conn.close()
+        logger.info(f"Deleted image: {image_id}")
+        # 204 No Content
+        return Response(status_code=204)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting image {image_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@app.delete("/all", status_code=204)
+async def delete_all_images():
+    """Delete all images from the database."""
+    logger.info("Endpoint called: DELETE /all")
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("DELETE FROM images")
+        deleted_count = cur.rowcount
+        conn.commit()
+        cur.close()
+        conn.close()
+        logger.info(f"Deleted {deleted_count} images from database")
+        return Response(status_code=204)
+    except Exception as e:
+        logger.error(f"Error deleting all images: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
 if __name__ == "__main__":
     import uvicorn
 

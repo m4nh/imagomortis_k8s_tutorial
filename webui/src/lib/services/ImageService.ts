@@ -73,6 +73,6 @@ export class ImageService {
 	 * @returns The URL string for the image
 	 */
 	getImageUrl(imageId: string): string {
-		return `${this.baseUrl}/images/${imageId}`;
+		return `${this.baseUrl}/images/${imageId}?t=${Date.now()}`;
 	}
 }

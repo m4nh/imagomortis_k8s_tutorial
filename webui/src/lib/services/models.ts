@@ -11,6 +11,9 @@ export interface Job {
 	completed?: boolean;
 	completed_at?: string | null;
 	progress?: Record<string, number> | null;
+	error?: string;
+	failed?: boolean;
+	failed_at?: string | null;
 }
 
 export interface Image {

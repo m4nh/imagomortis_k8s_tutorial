@@ -33,10 +33,15 @@ def process_image(
         logger.error("Could not load image from {input_path}", input_path=input_path)
         sys.exit(1)
 
+    # Simulate a random failure with 10% probability for testing
+    if random.random() < 0.1:
+        logger.error("Simulated random failure (10% chance). Exiting.")
+        sys.exit(1)
+
     height, width = img.shape[:2]
 
-    # Draw 10 random white circles
-    total_circles = 30
+    # Draw 15 random white circles
+    total_circles = 15
     for i in range(total_circles):
         x = random.randint(0, width - 1)
         y = random.randint(0, height - 1)

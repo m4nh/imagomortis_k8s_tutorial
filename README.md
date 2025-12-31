@@ -1,6 +1,18 @@
-# ImagoMortis
+# ImagoMortis (K8s Complex Framework Tutorial)
 
-## Components
+This **Fake** Framework simply let the users upload images and process them in parallel using Kubernetes Jobs.
+The workflow is as follows:
+* User uploads images via the Web UI or API.
+* The Uploader service stores the images temporarily and notifies the Pusher.
+* The Pusher service saves the images into the Postgres database.
+* The Scheduler service polls the database for unprocessed images and creates Kubernetes Jobs (Image Tasks) to process them.
+	* The Scheduler monitors the progress of each Image Task and updates the database accordingly.
+* Each Image Task processes an image (e.g., drawing random circles) and saves the result back to the database.
+* Users can view/download the processed images via the Web UI or API.
+
+Every component logs data with loguru in JSON format, which is collected by Fluent Bit and sent to Loki for centralized logging. Grafana is used to visualize logs and metrics.
+
+
 
 ```mermaid
 flowchart LR
@@ -65,37 +77,34 @@ flowchart LR
 	
 ```
 
-### Modules
+## Components Overview
 
-#### Uploader
+### Uploader
 
 The uploader, located in the [uploader](uploader) directory, is responsible for handling image uploads from users. It provides a simple and intuitive interface for selecting and uploading images to the server. It uploads images in a temporary folder with unique UUIDs to avoid filename conflicts.
 
-#### Pusher
+### Pusher
 
 The pusher, located in the [pusher](pusher) directory, processes the uploaded images. It retrieves images from the temporary upload folder, uploads a related entry into the database (with also binary data), and deletes the temporary files after processing. The pusher ensures that images are properly stored and managed within the system.
 
-#### Scheduler
+### Scheduler
 
 The scheduler, located in the [scheduler](scheduler) directory, polls the database for pending image processing tasks and dynamically creates Kubernetes Jobs to handle them. It uses the Kubernetes API to spawn Image Task jobs, monitors their progress, and updates the database with the results. The scheduler runs continuously and ensures efficient parallel processing of images.
 
-#### Image Task
+### Image Task
 
 The image task, located in the [image_task](image_task) directory, is a worker that processes individual images. It is spawned as a Kubernetes Job by the Scheduler. Each task loads an image, applies processing (e.g., drawing random circles), and saves the result. Image Tasks share a volume with the Scheduler for input/output file exchange.
 
-#### API
+### API
 
 The API, located in the [api](api) directory, provides endpoints for accessing and managing the images stored in the database. It allows users to retrieve image metadata, download images, and perform other operations related to image management. The API is designed to be RESTful and easy to use.
 
-#### Web UI
+### Web UI
 
 The Web UI, located in the [webui](webui) directory, offers a user-friendly interface for interacting with the microservices, like: Upload images, view/download/edit/delete existing images, etc. It is built using modern web technologies to ensure a responsive and engaging user experience.
 
 
-
 ## Development
-
-
 
 **TLDR**: Up the cluster with:
 

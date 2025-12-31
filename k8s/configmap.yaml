@@ -37,3 +37,7 @@ data:
   ORIGIN: "http://localhost:30080"
   HOST: "0.0.0.0"
   PORT: "3000"
+  # Scheduler configuration (moved from scheduler Deployment for central management)
+  SCHEDULER_POLL_INTERVAL: "5"
+  SCHEDULER_IMAGE_TASK_IMAGE: "imagomortis/imagetask:latest"
+  SCHEDULER_SHARED_VOLUME_PATH: "/app/shared"

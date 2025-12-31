@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
 	import type { Image } from '$lib/services/models';
 	import { UploadService } from '$lib/services/UploadService';
 	import { ImageService } from '$lib/services/ImageService';
@@ -7,6 +7,7 @@
 
 	let images = $state<Image[]>([]);
 	let isLoading = $state(false);
+	let pollInterval: number | null = null;
 	let isUploading = $state(false);
 	let error = $state<string | null>(null);
 	let uploadError = $state<string | null>(null);
@@ -16,15 +17,18 @@
 
 
 	async function fetchImages() {
-		try {
-			isLoading = true;
-			error = null;
-			images = await imageService.getImages();
-		} catch (e) {
-			error = e instanceof Error ? e.message : 'Failed to fetch images';
-		} finally {
-			isLoading = false;
-		}
+			// avoid overlapping fetches
+			if (isLoading) return;
+			try {
+				isLoading = true;
+				error = null;
+				images = await imageService.getImages();
+				console.log('Fetched images:', images);
+			} catch (e) {
+				error = e instanceof Error ? e.message : 'Failed to fetch images';
+			} finally {
+				isLoading = false;
+			}
 	}
 
 	async function handleUpload(event: Event) {
@@ -55,7 +59,20 @@
 	
 
 	onMount(() => {
-		fetchImages();
+			// initial load
+			fetchImages();
+
+			// start polling every 2s to auto refresh images
+			pollInterval = setInterval(() => {
+				fetchImages();
+			}, 2000) as unknown as number;
+	});
+
+	onDestroy(() => {
+		if (pollInterval !== null) {
+			clearInterval(pollInterval);
+			pollInterval = null;
+		}
 	});
 
 	
@@ -116,6 +133,7 @@
 					<tr class="bg-gray-200">
 						<th class="border border-gray-300 px-4 py-2 text-left">Preview</th>
 						<th class="border border-gray-300 px-4 py-2 text-left">ID</th>
+						<th class="border border-gray-300 px-4 py-2 text-left">Jobs</th>
 						<th class="border border-gray-300 px-4 py-2 text-left">Created At</th>
 						<th class="border border-gray-300 px-4 py-2 text-left">Resolution</th>
 						<th class="border border-gray-300 px-4 py-2 text-left">Size</th>
@@ -124,7 +142,7 @@
 				<tbody>
 					{#if images.length === 0}
 						<tr>
-							<td colspan="5" class="border border-gray-300 px-4 py-8 text-center text-gray-500">
+							<td colspan="8" class="border border-gray-300 px-4 py-8 text-center text-gray-500">
 								{isLoading ? 'Loading images...' : 'No images found'}
 							</td>
 						</tr>
