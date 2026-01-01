@@ -15,6 +15,7 @@ resources:
   - namespace.yaml
   - configmap.yaml
   - secrets.yaml
+  # - pv.yaml # Uncomment if you want to create the PV via kustomize
   - pvc.yaml
   - postgres.yaml
   - uploader.yaml

@@ -15,8 +15,9 @@ spec:
   resources:
     requests:
       storage: 5Gi
-  # Uncomment and specify storageClassName if needed
-  # storageClassName: standard
+  ## -- Uncomment and specify storageClassName or volumeName if needed
+  # storageClassName: ""
+  # volumeName: postgres-pv
 
 ---
 # PersistentVolumeClaim for shared uploads directory (between uploader and pusher)
