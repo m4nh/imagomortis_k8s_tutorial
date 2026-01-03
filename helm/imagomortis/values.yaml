@@ -61,7 +61,7 @@ database:
 # =============================================================================
 uploader:
   enabled: true
-  replicaCount: 8
+  replicaCount: 2
   image:
     repository: imagomortis/uploader
     tag: latest
