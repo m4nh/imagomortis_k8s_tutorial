@@ -1,0 +1,311 @@
+# Default values for imagomortis.
+# This is a YAML-formatted file.
+
+# Global settings
+global:
+  imagePullPolicy: IfNotPresent
+  storageClass: ""
+
+# Namespace configuration
+namespace:
+  create: true
+  name: imagomortis
+
+# Image registry settings
+imageRegistry: ""
+
+# Common labels
+commonLabels:
+  app.kubernetes.io/managed-by: helm
+  app.kubernetes.io/part-of: imagomortis
+
+# =============================================================================
+# Database Configuration
+# =============================================================================
+postgresql:
+  # Set to false to use Bitnami PostgreSQL subchart
+  enabled: true
+  image:
+    repository: postgres
+    tag: "15-alpine"
+    pullPolicy: IfNotPresent
+  auth:
+    username: postgres
+    password: postgres
+    database: imagomortis
+  primary:
+    persistence:
+      enabled: true
+      size: 5Gi
+      storageClass: ""
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+# Database connection settings (used by all components)
+database:
+  host: postgres
+  port: 5432
+  name: imagomortis
+  existingSecret: ""
+  secretKeys:
+    username: POSTGRES_USER
+    password: POSTGRES_PASSWORD
+
+# =============================================================================
+# Uploader Service
+# =============================================================================
+uploader:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: imagomortis/uploader
+    tag: latest
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8000
+  config:
+    resizeHeight: "256"
+    host: "0.0.0.0"
+    port: "8000"
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "50m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  probes:
+    liveness:
+      path: /docs
+      port: 8000
+      initialDelaySeconds: 10
+      periodSeconds: 10
+    readiness:
+      path: /docs
+      port: 8000
+      initialDelaySeconds: 5
+      periodSeconds: 5
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+# =============================================================================
+# Pusher Service
+# =============================================================================
+pusher:
+  enabled: true
+  replicaCount: 4
+  image:
+    repository: imagomortis/pusher
+    tag: latest
+    pullPolicy: IfNotPresent
+  config:
+    pollInterval: "5"
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "50m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+# =============================================================================
+# API Service
+# =============================================================================
+api:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: imagomortis/api
+    tag: latest
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8000
+  config:
+    host: "0.0.0.0"
+    port: "8000"
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "50m"
+    limits:
+      memory: "256Mi"
+      cpu: "250m"
+  probes:
+    liveness:
+      path: /docs
+      port: 8000
+      initialDelaySeconds: 10
+      periodSeconds: 10
+    readiness:
+      path: /docs
+      port: 8000
+      initialDelaySeconds: 5
+      periodSeconds: 5
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+# =============================================================================
+# WebUI Service
+# =============================================================================
+webui:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: imagomortis/webui
+    tag: latest
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 3000
+  config:
+    host: "0.0.0.0"
+    port: "3000"
+    # URLs accessed from browser (must be externally accessible)
+    publicUploadServiceUrl: "http://localhost:30082"
+    publicApiServiceUrl: "http://localhost:30081"
+    origin: "http://localhost:30080"
+  resources:
+    requests:
+      memory: "64Mi"
+      cpu: "25m"
+    limits:
+      memory: "256Mi"
+      cpu: "250m"
+  probes:
+    liveness:
+      path: /
+      port: 3000
+      initialDelaySeconds: 10
+      periodSeconds: 10
+    readiness:
+      path: /
+      port: 3000
+      initialDelaySeconds: 5
+      periodSeconds: 5
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+# =============================================================================
+# Scheduler Service
+# =============================================================================
+scheduler:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: imagomortis/scheduler
+    tag: latest
+    pullPolicy: IfNotPresent
+  config:
+    pollInterval: "5"
+    sharedVolumePath: "/app/shared"
+  imageTask:
+    image:
+      repository: imagomortis/imagetask
+      tag: latest
+  serviceAccount:
+    create: true
+    name: scheduler-sa
+  rbac:
+    create: true
+    clusterRole: true
+  persistence:
+    size: 5Gi
+    storageClass: ""
+    # PVC name - keep default for compatibility with dynamically spawned Jobs
+    pvcName: "scheduler-shared-pvc"
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "50m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+# =============================================================================
+# Persistent Volume Claims
+# =============================================================================
+persistence:
+  uploads:
+    enabled: true
+    size: 10Gi
+    storageClass: ""
+    accessMode: ReadWriteMany
+
+# =============================================================================
+# Ingress Configuration
+# =============================================================================
+ingress:
+  enabled: true
+  className: ""
+  annotations: {}
+    # nginx.ingress.kubernetes.io/rewrite-target: /
+    # nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    # nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+  host: imagomortis.local
+  tls: []
+  #  - secretName: imagomortis-tls
+  #    hosts:
+  #      - imagomortis.local
+
+# NodePort services for local development
+nodePort:
+  enabled: true
+  webui:
+    port: 30080
+  api:
+    port: 30081
+  uploader:
+    port: 30082
+
+# =============================================================================
+# Logging Stack (Loki + Grafana + Fluent Bit)
+# =============================================================================
+logging:
+  enabled: true
+  
+  loki:
+    image:
+      repository: grafana/loki
+      tag: "3.0.0"
+    persistence:
+      enabled: true
+      size: 10Gi
+      storageClass: ""
+    resources: {}
+  
+  grafana:
+    enabled: true
+    image:
+      repository: grafana/grafana
+      tag: latest
+    service:
+      type: LoadBalancer
+      port: 80
+    resources: {}
+  
+  fluentBit:
+    enabled: true
+    image:
+      repository: fluent/fluent-bit
+      tag: "3.0"
+    serviceAccount:
+      create: true
+      name: fluent-bit
+    rbac:
+      create: true

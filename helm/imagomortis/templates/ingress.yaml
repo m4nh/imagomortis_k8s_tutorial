@@ -1,0 +1,125 @@
+{{- if .Values.ingress.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "imagomortis.fullname" . }}-ingress
+  namespace: {{ include "imagomortis.namespace" . }}
+  labels:
+    {{- include "imagomortis.labels" . | nindent 4 }}
+  {{- with .Values.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if .Values.ingress.className }}
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- end }}
+  {{- if .Values.ingress.tls }}
+  tls:
+    {{- range .Values.ingress.tls }}
+    - hosts:
+        {{- range .hosts }}
+        - {{ . | quote }}
+        {{- end }}
+      secretName: {{ .secretName }}
+    {{- end }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.ingress.host }}
+      http:
+        paths:
+          # Web UI - main frontend
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "imagomortis.fullname" . }}-webui
+                port:
+                  number: {{ .Values.webui.service.port }}
+          # API endpoints
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "imagomortis.fullname" . }}-api
+                port:
+                  number: {{ .Values.api.service.port }}
+          # Upload endpoint
+          - path: /upload
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "imagomortis.fullname" . }}-uploader
+                port:
+                  number: {{ .Values.uploader.service.port }}
+{{- end }}
+---
+# NodePort services for local development
+{{- if .Values.nodePort.enabled }}
+{{- if .Values.webui.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "imagomortis.fullname" . }}-webui-nodeport
+  namespace: {{ include "imagomortis.namespace" . }}
+  labels:
+    {{- include "imagomortis.labels" . | nindent 4 }}
+    app.kubernetes.io/component: frontend
+spec:
+  type: NodePort
+  ports:
+    - port: {{ .Values.webui.service.port }}
+      targetPort: {{ .Values.webui.service.port }}
+      nodePort: {{ .Values.nodePort.webui.port }}
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "imagomortis.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: frontend
+{{- end }}
+---
+{{- if .Values.api.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "imagomortis.fullname" . }}-api-nodeport
+  namespace: {{ include "imagomortis.namespace" . }}
+  labels:
+    {{- include "imagomortis.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backend-api
+spec:
+  type: NodePort
+  ports:
+    - port: {{ .Values.api.service.port }}
+      targetPort: {{ .Values.api.service.port }}
+      nodePort: {{ .Values.nodePort.api.port }}
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "imagomortis.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: backend-api
+{{- end }}
+---
+{{- if .Values.uploader.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "imagomortis.fullname" . }}-uploader-nodeport
+  namespace: {{ include "imagomortis.namespace" . }}
+  labels:
+    {{- include "imagomortis.labels" . | nindent 4 }}
+    app.kubernetes.io/component: upload-service
+spec:
+  type: NodePort
+  ports:
+    - port: {{ .Values.uploader.service.port }}
+      targetPort: {{ .Values.uploader.service.port }}
+      nodePort: {{ .Values.nodePort.uploader.port }}
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "imagomortis.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: upload-service
+{{- end }}
+{{- end }}

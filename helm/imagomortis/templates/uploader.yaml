@@ -1,0 +1,102 @@
+{{- if .Values.uploader.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "imagomortis.fullname" . }}-uploader
+  namespace: {{ include "imagomortis.namespace" . }}
+  labels:
+    {{- include "imagomortis.labels" . | nindent 4 }}
+    app.kubernetes.io/component: upload-service
+spec:
+  replicas: {{ .Values.uploader.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "imagomortis.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: upload-service
+  template:
+    metadata:
+      labels:
+        {{- include "imagomortis.labels" . | nindent 8 }}
+        app.kubernetes.io/component: upload-service
+    spec:
+      {{- with .Values.uploader.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.uploader.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.uploader.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: uploader
+          image: "{{ .Values.uploader.image.repository }}:{{ .Values.uploader.image.tag }}"
+          imagePullPolicy: {{ .Values.uploader.image.pullPolicy | default .Values.global.imagePullPolicy }}
+          ports:
+            - containerPort: {{ .Values.uploader.service.port }}
+              name: http
+          env:
+            - name: UPLOADER_RESIZE_HEIGHT
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "imagomortis.configMapName" . }}
+                  key: UPLOADER_RESIZE_HEIGHT
+            - name: UPLOADER_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "imagomortis.configMapName" . }}
+                  key: UPLOADER_HOST
+            - name: UPLOADER_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "imagomortis.configMapName" . }}
+                  key: UPLOADER_PORT
+          volumeMounts:
+            - name: uploads
+              mountPath: /app/uploads
+          resources:
+            {{- toYaml .Values.uploader.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.uploader.probes.liveness.path }}
+              port: {{ .Values.uploader.probes.liveness.port }}
+            initialDelaySeconds: {{ .Values.uploader.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.uploader.probes.liveness.periodSeconds }}
+            timeoutSeconds: 3
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.uploader.probes.readiness.path }}
+              port: {{ .Values.uploader.probes.readiness.port }}
+            initialDelaySeconds: {{ .Values.uploader.probes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.uploader.probes.readiness.periodSeconds }}
+            timeoutSeconds: 3
+            failureThreshold: 3
+      volumes:
+        - name: uploads
+          persistentVolumeClaim:
+            claimName: {{ include "imagomortis.uploadsPvcName" . }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "imagomortis.fullname" . }}-uploader
+  namespace: {{ include "imagomortis.namespace" . }}
+  labels:
+    {{- include "imagomortis.labels" . | nindent 4 }}
+    app.kubernetes.io/component: upload-service
+spec:
+  type: {{ .Values.uploader.service.type }}
+  ports:
+    - port: {{ .Values.uploader.service.port }}
+      targetPort: {{ .Values.uploader.service.port }}
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "imagomortis.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: upload-service
+{{- end }}

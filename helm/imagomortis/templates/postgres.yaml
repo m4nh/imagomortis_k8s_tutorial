@@ -1,0 +1,100 @@
+{{- if .Values.postgresql.enabled }}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "imagomortis.fullname" . }}-postgres
+  namespace: {{ include "imagomortis.namespace" . }}
+  labels:
+    {{- include "imagomortis.labels" . | nindent 4 }}
+    app.kubernetes.io/component: database
+spec:
+  serviceName: {{ include "imagomortis.postgresHost" . }}
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "imagomortis.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: database
+  template:
+    metadata:
+      labels:
+        {{- include "imagomortis.labels" . | nindent 8 }}
+        app.kubernetes.io/component: database
+    spec:
+      containers:
+        - name: postgres
+          image: "{{ .Values.postgresql.image.repository }}:{{ .Values.postgresql.image.tag }}"
+          imagePullPolicy: {{ .Values.postgresql.image.pullPolicy }}
+          ports:
+            - containerPort: 5432
+              name: postgres
+          env:
+            - name: POSTGRES_DB
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "imagomortis.configMapName" . }}
+                  key: POSTGRES_DB
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "imagomortis.secretName" . }}
+                  key: {{ .Values.database.secretKeys.username }}
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "imagomortis.secretName" . }}
+                  key: {{ .Values.database.secretKeys.password }}
+            - name: PGDATA
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "imagomortis.configMapName" . }}
+                  key: PGDATA
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data
+          resources:
+            {{- toYaml .Values.postgresql.resources | nindent 12 }}
+          livenessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - postgres
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - postgres
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+      volumes:
+        - name: postgres-data
+          persistentVolumeClaim:
+            claimName: {{ include "imagomortis.postgresPvcName" . }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "imagomortis.postgresHost" . }}
+  namespace: {{ include "imagomortis.namespace" . }}
+  labels:
+    {{- include "imagomortis.labels" . | nindent 4 }}
+    app.kubernetes.io/component: database
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5432
+      targetPort: 5432
+      protocol: TCP
+      name: postgres
+  selector:
+    {{- include "imagomortis.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: database
+{{- end }}

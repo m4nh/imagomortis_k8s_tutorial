@@ -1,0 +1,101 @@
+# Production values for imagomortis
+# Use this as a starting point for production deployments
+
+namespace:
+  name: imagomortis-prod
+
+# Use a private registry
+imageRegistry: "your-registry.example.com"
+
+postgresql:
+  auth:
+    username: imagomortis
+    password: "CHANGE-ME-TO-SECURE-PASSWORD"
+    database: imagomortis
+  primary:
+    persistence:
+      size: 20Gi
+      storageClass: "fast-ssd"
+
+# Increased replicas for production
+uploader:
+  replicaCount: 3
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "1Gi"
+      cpu: "1000m"
+
+pusher:
+  replicaCount: 6
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "1Gi"
+      cpu: "1000m"
+
+api:
+  replicaCount: 2
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+webui:
+  replicaCount: 2
+  config:
+    publicUploadServiceUrl: "https://imagomortis.example.com/upload"
+    publicApiServiceUrl: "https://imagomortis.example.com/api"
+    origin: "https://imagomortis.example.com"
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "50m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+scheduler:
+  replicaCount: 2
+
+persistence:
+  uploads:
+    size: 100Gi
+    storageClass: "nfs"
+
+# Production ingress with TLS
+ingress:
+  enabled: true
+  className: nginx
+  host: imagomortis.example.com
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+  tls:
+    - secretName: imagomortis-tls
+      hosts:
+        - imagomortis.example.com
+
+# Disable NodePort in production
+nodePort:
+  enabled: false
+
+# Logging with persistent storage
+logging:
+  enabled: true
+  loki:
+    persistence:
+      enabled: true
+      size: 50Gi
+      storageClass: "fast-ssd"
+  grafana:
+    service:
+      type: ClusterIP

@@ -1,0 +1,105 @@
+{{- if .Values.webui.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "imagomortis.fullname" . }}-webui
+  namespace: {{ include "imagomortis.namespace" . }}
+  labels:
+    {{- include "imagomortis.labels" . | nindent 4 }}
+    app.kubernetes.io/component: frontend
+spec:
+  replicas: {{ .Values.webui.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "imagomortis.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: frontend
+  template:
+    metadata:
+      labels:
+        {{- include "imagomortis.labels" . | nindent 8 }}
+        app.kubernetes.io/component: frontend
+    spec:
+      {{- with .Values.webui.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.webui.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.webui.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: webui
+          image: "{{ .Values.webui.image.repository }}:{{ .Values.webui.image.tag }}"
+          imagePullPolicy: {{ .Values.webui.image.pullPolicy | default .Values.global.imagePullPolicy }}
+          ports:
+            - containerPort: {{ .Values.webui.service.port }}
+              name: http
+          env:
+            - name: PUBLIC_UPLOAD_SERVICE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "imagomortis.configMapName" . }}
+                  key: PUBLIC_UPLOAD_SERVICE_URL
+            - name: PUBLIC_API_SERVICE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "imagomortis.configMapName" . }}
+                  key: PUBLIC_API_SERVICE_URL
+            - name: ORIGIN
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "imagomortis.configMapName" . }}
+                  key: ORIGIN
+            - name: HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "imagomortis.configMapName" . }}
+                  key: HOST
+            - name: PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "imagomortis.configMapName" . }}
+                  key: PORT
+          resources:
+            {{- toYaml .Values.webui.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.webui.probes.liveness.path }}
+              port: {{ .Values.webui.probes.liveness.port }}
+            initialDelaySeconds: {{ .Values.webui.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.webui.probes.liveness.periodSeconds }}
+            timeoutSeconds: 3
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.webui.probes.readiness.path }}
+              port: {{ .Values.webui.probes.readiness.port }}
+            initialDelaySeconds: {{ .Values.webui.probes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.webui.probes.readiness.periodSeconds }}
+            timeoutSeconds: 3
+            failureThreshold: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "imagomortis.fullname" . }}-webui
+  namespace: {{ include "imagomortis.namespace" . }}
+  labels:
+    {{- include "imagomortis.labels" . | nindent 4 }}
+    app.kubernetes.io/component: frontend
+spec:
+  type: {{ .Values.webui.service.type }}
+  ports:
+    - port: {{ .Values.webui.service.port }}
+      targetPort: {{ .Values.webui.service.port }}
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "imagomortis.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: frontend
+{{- end }}

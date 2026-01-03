@@ -1,0 +1,72 @@
+{{/*
+NOTES.txt - Display after helm install
+*/}}
+Thank you for installing {{ .Chart.Name }}!
+
+Your release is named: {{ .Release.Name }}
+Namespace: {{ include "imagomortis.namespace" . }}
+
+=============================================================================
+GETTING STARTED
+=============================================================================
+
+{{- if .Values.nodePort.enabled }}
+
+For local development with NodePort services:
+
+  WebUI:    http://localhost:{{ .Values.nodePort.webui.port }}
+  API:      http://localhost:{{ .Values.nodePort.api.port }}
+  Uploader: http://localhost:{{ .Values.nodePort.uploader.port }}
+
+{{- end }}
+
+{{- if .Values.ingress.enabled }}
+
+For production with Ingress:
+
+  Add the following to your /etc/hosts file:
+    <INGRESS_IP>  {{ .Values.ingress.host }}
+
+  Then access the application at:
+    http://{{ .Values.ingress.host }}
+
+{{- end }}
+
+=============================================================================
+COMPONENTS STATUS
+=============================================================================
+
+To check the status of your pods:
+  kubectl get pods -n {{ include "imagomortis.namespace" . }}
+
+To check the services:
+  kubectl get svc -n {{ include "imagomortis.namespace" . }}
+
+{{- if .Values.logging.enabled }}
+
+=============================================================================
+LOGGING
+=============================================================================
+
+{{- if .Values.logging.grafana.enabled }}
+Grafana is available at:
+{{- if eq .Values.logging.grafana.service.type "LoadBalancer" }}
+  kubectl get svc {{ include "imagomortis.fullname" . }}-grafana -n {{ include "imagomortis.namespace" . }} -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
+{{- else }}
+  kubectl port-forward svc/{{ include "imagomortis.fullname" . }}-grafana 3000:{{ .Values.logging.grafana.service.port }} -n {{ include "imagomortis.namespace" . }}
+  Then open: http://localhost:3000
+{{- end }}
+{{- end }}
+{{- end }}
+
+=============================================================================
+CONFIGURATION
+=============================================================================
+
+To update the configuration:
+  helm upgrade {{ .Release.Name }} ./imagomortis -f your-values.yaml
+
+To uninstall the chart:
+  helm uninstall {{ .Release.Name }} -n {{ include "imagomortis.namespace" . }}
+
+For more information, visit the project documentation.

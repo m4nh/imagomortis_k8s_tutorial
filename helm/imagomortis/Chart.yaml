@@ -1,0 +1,23 @@
+apiVersion: v2
+name: imagomortis
+description: A Helm chart for ImagoMortis - an image processing application with upload, processing, and viewing capabilities
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - imagomortis
+  - image-processing
+  - upload
+  - kubernetes
+maintainers:
+  - name: ImagoMortis Team
+home: https://github.com/imagomortis/imagomortis
+sources:
+  - https://github.com/imagomortis/imagomortis
+# Optional: Uncomment to use Bitnami PostgreSQL instead of built-in
+# dependencies:
+#   - name: postgresql
+#     version: "15.x.x"
+#     repository: https://charts.bitnami.com/bitnami
+#     condition: postgresql.external
+#     alias: postgresql-ha

@@ -1,0 +1,319 @@
+{{- if .Values.logging.enabled }}
+---
+# PersistentVolumeClaim for Loki
+{{- if .Values.logging.loki.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "imagomortis.lokiPvcName" . }}
+  namespace: {{ include "imagomortis.namespace" . }}
+  labels:
+    {{- include "imagomortis.labels" . | nindent 4 }}
+    app.kubernetes.io/component: logging
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.logging.loki.persistence.size }}
+  {{- if .Values.logging.loki.persistence.storageClass }}
+  storageClassName: {{ .Values.logging.loki.persistence.storageClass }}
+  {{- else if .Values.global.storageClass }}
+  storageClassName: {{ .Values.global.storageClass }}
+  {{- end }}
+{{- end }}
+---
+# Loki ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "imagomortis.fullname" . }}-loki-config
+  namespace: {{ include "imagomortis.namespace" . }}
+  labels:
+    {{- include "imagomortis.labels" . | nindent 4 }}
+data:
+  loki.yaml: |
+    auth_enabled: false
+    server:
+      http_listen_port: 3100
+    common:
+      path_prefix: /data/loki
+      storage:
+        filesystem:
+          chunks_directory: /data/loki/chunks
+          rules_directory: /data/loki/rules
+      replication_factor: 1
+      ring:
+        kvstore:
+          store: inmemory
+    schema_config:
+      configs:
+        - from: 2020-10-24
+          store: tsdb
+          object_store: filesystem
+          schema: v13
+          index:
+            prefix: index_
+            period: 24h
+---
+# Loki Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "imagomortis.fullname" . }}-loki
+  namespace: {{ include "imagomortis.namespace" . }}
+  labels:
+    {{- include "imagomortis.labels" . | nindent 4 }}
+    app.kubernetes.io/component: logging
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: loki
+  template:
+    metadata:
+      labels:
+        app: loki
+    spec:
+      containers:
+        - name: loki
+          image: "{{ .Values.logging.loki.image.repository }}:{{ .Values.logging.loki.image.tag }}"
+          args: ["-config.file=/etc/loki/loki.yaml"]
+          ports:
+            - containerPort: 3100
+          volumeMounts:
+            - name: config
+              mountPath: /etc/loki
+            - name: storage
+              mountPath: /data
+          {{- with .Values.logging.loki.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "imagomortis.fullname" . }}-loki-config
+        - name: storage
+          {{- if .Values.logging.loki.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "imagomortis.lokiPvcName" . }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+---
+# Loki Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "imagomortis.fullname" . }}-loki
+  namespace: {{ include "imagomortis.namespace" . }}
+  labels:
+    {{- include "imagomortis.labels" . | nindent 4 }}
+spec:
+  selector:
+    app: loki
+  ports:
+    - protocol: TCP
+      port: 3100
+      targetPort: 3100
+---
+{{- if .Values.logging.grafana.enabled }}
+# Grafana Datasources ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "imagomortis.fullname" . }}-grafana-datasources
+  namespace: {{ include "imagomortis.namespace" . }}
+  labels:
+    {{- include "imagomortis.labels" . | nindent 4 }}
+data:
+  datasource.yaml: |
+    apiVersion: 1
+    datasources:
+    - name: Loki
+      type: loki
+      access: proxy
+      url: http://{{ include "imagomortis.fullname" . }}-loki:3100
+      isDefault: true
+---
+# Grafana Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "imagomortis.fullname" . }}-grafana
+  namespace: {{ include "imagomortis.namespace" . }}
+  labels:
+    {{- include "imagomortis.labels" . | nindent 4 }}
+    app.kubernetes.io/component: logging
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:
+      containers:
+        - name: grafana
+          image: "{{ .Values.logging.grafana.image.repository }}:{{ .Values.logging.grafana.image.tag }}"
+          ports:
+            - containerPort: 3000
+          volumeMounts:
+            - name: datasource-config
+              mountPath: /etc/grafana/provisioning/datasources
+          {{- with .Values.logging.grafana.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      volumes:
+        - name: datasource-config
+          configMap:
+            name: {{ include "imagomortis.fullname" . }}-grafana-datasources
+---
+# Grafana Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "imagomortis.fullname" . }}-grafana
+  namespace: {{ include "imagomortis.namespace" . }}
+  labels:
+    {{- include "imagomortis.labels" . | nindent 4 }}
+spec:
+  selector:
+    app: grafana
+  ports:
+    - protocol: TCP
+      port: {{ .Values.logging.grafana.service.port }}
+      targetPort: 3000
+  type: {{ .Values.logging.grafana.service.type }}
+{{- end }}
+---
+{{- if .Values.logging.fluentBit.enabled }}
+# Fluent Bit ServiceAccount
+{{- if .Values.logging.fluentBit.serviceAccount.create }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "imagomortis.fluentBitServiceAccountName" . }}
+  namespace: {{ include "imagomortis.namespace" . }}
+  labels:
+    {{- include "imagomortis.labels" . | nindent 4 }}
+{{- end }}
+---
+{{- if .Values.logging.fluentBit.rbac.create }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "imagomortis.fullname" . }}-fluent-bit-read
+  labels:
+    {{- include "imagomortis.labels" . | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources: ["namespaces", "pods"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "imagomortis.fullname" . }}-fluent-bit-read
+  labels:
+    {{- include "imagomortis.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "imagomortis.fullname" . }}-fluent-bit-read
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "imagomortis.fluentBitServiceAccountName" . }}
+    namespace: {{ include "imagomortis.namespace" . }}
+{{- end }}
+---
+# Fluent Bit ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "imagomortis.fullname" . }}-fluent-bit-config
+  namespace: {{ include "imagomortis.namespace" . }}
+  labels:
+    {{- include "imagomortis.labels" . | nindent 4 }}
+data:
+  fluent-bit.conf: |
+    [SERVICE]
+        Flush         1
+        Log_Level     info
+        Parsers_File  parsers.conf
+
+    [INPUT]
+        Name             tail
+        Path             /var/log/containers/*.log
+        Parser           docker
+        Tag              kube.*
+        Mem_Buf_Limit    5MB
+
+    [FILTER]
+        Name                kubernetes
+        Match               kube.*
+        Merge_Log           On
+        Merge_Log_Key       log_processed
+        Keep_Log            Off
+
+    [OUTPUT]
+        Name                   loki
+        Match                  *
+        Host                   {{ include "imagomortis.fullname" . }}-loki.{{ include "imagomortis.namespace" . }}.svc.cluster.local
+        Port                   3100
+        Labels                 job=fluent-bit
+        Auto_Kubernetes_Labels On
+        Line_Format            json
+  
+  parsers.conf: |
+    [PARSER]
+        Name        docker
+        Format      json
+        Time_Key    time
+        Time_Format %Y-%m-%dT%H:%M:%S.%L
+---
+# Fluent Bit DaemonSet
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: {{ include "imagomortis.fullname" . }}-fluent-bit
+  namespace: {{ include "imagomortis.namespace" . }}
+  labels:
+    {{- include "imagomortis.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      k8s-app: fluent-bit
+  template:
+    metadata:
+      labels:
+        k8s-app: fluent-bit
+    spec:
+      serviceAccountName: {{ include "imagomortis.fluentBitServiceAccountName" . }}
+      containers:
+        - name: fluent-bit
+          image: "{{ .Values.logging.fluentBit.image.repository }}:{{ .Values.logging.fluentBit.image.tag }}"
+          volumeMounts:
+            - name: varlog
+              mountPath: /var/log
+            - name: varlibdockercontainers
+              mountPath: /var/lib/docker/containers
+              readOnly: true
+            - name: config
+              mountPath: /fluent-bit/etc/
+      volumes:
+        - name: varlog
+          hostPath:
+            path: /var/log
+        - name: varlibdockercontainers
+          hostPath:
+            path: /var/lib/docker/containers
+        - name: config
+          configMap:
+            name: {{ include "imagomortis.fullname" . }}-fluent-bit-config
+{{- end }}
+{{- end }}

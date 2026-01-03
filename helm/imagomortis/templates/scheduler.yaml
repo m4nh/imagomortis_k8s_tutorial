@@ -1,0 +1,183 @@
+{{- if .Values.scheduler.enabled }}
+---
+# ServiceAccount for scheduler
+{{- if .Values.scheduler.serviceAccount.create }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "imagomortis.schedulerServiceAccountName" . }}
+  namespace: {{ include "imagomortis.namespace" . }}
+  labels:
+    {{- include "imagomortis.labels" . | nindent 4 }}
+    app.kubernetes.io/component: scheduler
+{{- end }}
+---
+# Role to allow scheduler to manage Jobs
+{{- if .Values.scheduler.rbac.create }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "imagomortis.fullname" . }}-scheduler-role
+  namespace: {{ include "imagomortis.namespace" . }}
+  labels:
+    {{- include "imagomortis.labels" . | nindent 4 }}
+    app.kubernetes.io/component: scheduler
+rules:
+  - apiGroups: ["batch"]
+    resources: ["jobs"]
+    verbs: ["create", "get", "list", "watch", "delete"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get", "list", "watch"]
+---
+# RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "imagomortis.fullname" . }}-scheduler-rolebinding
+  namespace: {{ include "imagomortis.namespace" . }}
+  labels:
+    {{- include "imagomortis.labels" . | nindent 4 }}
+    app.kubernetes.io/component: scheduler
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "imagomortis.schedulerServiceAccountName" . }}
+    namespace: {{ include "imagomortis.namespace" . }}
+roleRef:
+  kind: Role
+  name: {{ include "imagomortis.fullname" . }}-scheduler-role
+  apiGroup: rbac.authorization.k8s.io
+{{- end }}
+---
+# ClusterRole (if enabled)
+{{- if and .Values.scheduler.rbac.create .Values.scheduler.rbac.clusterRole }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "imagomortis.fullname" . }}-scheduler-clusterrole
+  labels:
+    {{- include "imagomortis.labels" . | nindent 4 }}
+rules:
+  - apiGroups: ["batch"]
+    resources: ["jobs"]
+    verbs: ["create", "get", "list", "watch", "delete"]
+  - apiGroups: [""]
+    resources: ["pods", "pods/log"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "imagomortis.fullname" . }}-scheduler-clusterrolebinding
+  labels:
+    {{- include "imagomortis.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "imagomortis.fullname" . }}-scheduler-clusterrole
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "imagomortis.schedulerServiceAccountName" . }}
+    namespace: {{ include "imagomortis.namespace" . }}
+{{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "imagomortis.fullname" . }}-scheduler
+  namespace: {{ include "imagomortis.namespace" . }}
+  labels:
+    {{- include "imagomortis.labels" . | nindent 4 }}
+    app.kubernetes.io/component: scheduler
+spec:
+  replicas: {{ .Values.scheduler.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "imagomortis.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: scheduler
+  template:
+    metadata:
+      labels:
+        {{- include "imagomortis.labels" . | nindent 8 }}
+        app.kubernetes.io/component: scheduler
+    spec:
+      serviceAccountName: {{ include "imagomortis.schedulerServiceAccountName" . }}
+      {{- with .Values.scheduler.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.scheduler.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.scheduler.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: scheduler
+          image: "{{ .Values.scheduler.image.repository }}:{{ .Values.scheduler.image.tag }}"
+          imagePullPolicy: {{ .Values.scheduler.image.pullPolicy | default .Values.global.imagePullPolicy }}
+          env:
+            - name: SCHEDULER_POLL_INTERVAL
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "imagomortis.configMapName" . }}
+                  key: SCHEDULER_POLL_INTERVAL
+            - name: SCHEDULER_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: SCHEDULER_IMAGE_TASK_IMAGE
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "imagomortis.configMapName" . }}
+                  key: SCHEDULER_IMAGE_TASK_IMAGE
+            - name: SCHEDULER_SHARED_VOLUME_PATH
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "imagomortis.configMapName" . }}
+                  key: SCHEDULER_SHARED_VOLUME_PATH
+            - name: SCHEDULER_SHARED_PVC_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "imagomortis.configMapName" . }}
+                  key: SCHEDULER_SHARED_PVC_NAME
+            - name: SCHEDULER_DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "imagomortis.configMapName" . }}
+                  key: POSTGRES_HOST
+            - name: SCHEDULER_DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "imagomortis.configMapName" . }}
+                  key: POSTGRES_PORT
+            - name: SCHEDULER_DB_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "imagomortis.configMapName" . }}
+                  key: POSTGRES_DB
+            - name: SCHEDULER_DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "imagomortis.secretName" . }}
+                  key: {{ .Values.database.secretKeys.username }}
+            - name: SCHEDULER_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "imagomortis.secretName" . }}
+                  key: {{ .Values.database.secretKeys.password }}
+          volumeMounts:
+            - name: shared-data
+              mountPath: /app/shared
+          resources:
+            {{- toYaml .Values.scheduler.resources | nindent 12 }}
+      volumes:
+        - name: shared-data
+          persistentVolumeClaim:
+            claimName: {{ include "imagomortis.schedulerPvcName" . }}
+{{- end }}

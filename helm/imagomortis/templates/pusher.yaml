@@ -1,0 +1,79 @@
+{{- if .Values.pusher.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "imagomortis.fullname" . }}-pusher
+  namespace: {{ include "imagomortis.namespace" . }}
+  labels:
+    {{- include "imagomortis.labels" . | nindent 4 }}
+    app.kubernetes.io/component: image-processor
+spec:
+  replicas: {{ .Values.pusher.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "imagomortis.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: image-processor
+  template:
+    metadata:
+      labels:
+        {{- include "imagomortis.labels" . | nindent 8 }}
+        app.kubernetes.io/component: image-processor
+    spec:
+      {{- with .Values.pusher.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.pusher.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.pusher.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: pusher
+          image: "{{ .Values.pusher.image.repository }}:{{ .Values.pusher.image.tag }}"
+          imagePullPolicy: {{ .Values.pusher.image.pullPolicy | default .Values.global.imagePullPolicy }}
+          env:
+            - name: PUSHER_POLL_INTERVAL
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "imagomortis.configMapName" . }}
+                  key: PUSHER_POLL_INTERVAL
+            - name: PUSHER_DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "imagomortis.configMapName" . }}
+                  key: POSTGRES_HOST
+            - name: PUSHER_DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "imagomortis.configMapName" . }}
+                  key: POSTGRES_PORT
+            - name: PUSHER_DB_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "imagomortis.configMapName" . }}
+                  key: POSTGRES_DB
+            - name: PUSHER_DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "imagomortis.secretName" . }}
+                  key: {{ .Values.database.secretKeys.username }}
+            - name: PUSHER_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "imagomortis.secretName" . }}
+                  key: {{ .Values.database.secretKeys.password }}
+          volumeMounts:
+            - name: uploads
+              mountPath: /app/uploads
+          resources:
+            {{- toYaml .Values.pusher.resources | nindent 12 }}
+      volumes:
+        - name: uploads
+          persistentVolumeClaim:
+            claimName: {{ include "imagomortis.uploadsPvcName" . }}
+{{- end }}
